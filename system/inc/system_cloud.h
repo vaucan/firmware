@@ -19,11 +19,11 @@
 #pragma once
 
 #include "static_assert.h"
+#include "spark_wiring_string.h"
+#include "spark_protocol_functions.h"
 #include <string.h>
 #include <time.h>
 #include <stdint.h>
-
-typedef struct SparkProtocol SparkProtocol;
 
 
 typedef enum
@@ -34,13 +34,13 @@ typedef enum
 struct CloudVariableTypeBase {};
 struct CloudVariableTypeBool : public CloudVariableTypeBase {
     using vartype = bool;
-    using varref = bool*;
+    using varref = const bool*;
     CloudVariableTypeBool(){};
     static inline Spark_Data_TypeDef value() { return CLOUD_VAR_BOOLEAN; }
 };
 struct CloudVariableTypeInt : public CloudVariableTypeBase {
     using vartype = int;
-    using varref = int*;
+    using varref = const int*;
     CloudVariableTypeInt(){};
     static inline Spark_Data_TypeDef value() { return CLOUD_VAR_INT; }
 };
@@ -52,7 +52,7 @@ struct CloudVariableTypeString : public CloudVariableTypeBase {
 };
 struct CloudVariableTypeDouble : public CloudVariableTypeBase {
     using vartype = double;
-    using varref = double*;
+    using varref = const double*;
 
     CloudVariableTypeDouble(){};
     static inline Spark_Data_TypeDef value() { return CLOUD_VAR_DOUBLE; }
@@ -63,22 +63,29 @@ const CloudVariableTypeInt INT;
 const CloudVariableTypeString STRING;
 const CloudVariableTypeDouble DOUBLE;
 
+#if PLATFORM_ID==3
+// avoid a c-linkage incompatible with C error on newer versions of gcc
+String spark_deviceID(void);
+#endif
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+#if PLATFORM_ID!=3
+String spark_deviceID(void);
 #endif
 
 void cloud_disconnect(bool closeSocket=true);
 
 
-struct String;
+class String;
 
 
-#ifdef PLATFORM_ID
+#if defined(PLATFORM_ID)
+
+#if PLATFORM_ID!=3
 STATIC_ASSERT(spark_data_typedef_is_1_byte, sizeof(Spark_Data_TypeDef)==1);
-
-String bytes2hex(const uint8_t* buf, unsigned len);
-String spark_deviceID(void);
+#endif
 
 #endif
 
@@ -116,7 +123,13 @@ struct  cloud_function_descriptor {
 
 STATIC_ASSERT(cloud_function_descriptor_size, sizeof(cloud_function_descriptor)==16 || sizeof(void*)!=4);
 
-bool spark_variable(const char *varKey, const void *userVar, Spark_Data_TypeDef userVarType, void* reserved);
+typedef struct spark_variable_t
+{
+    uint16_t size;
+    const void* (*update)(const char* nane, Spark_Data_TypeDef type, const void* var, void* reserved);
+} spark_variable_t;
+
+bool spark_variable(const char *varKey, const void *userVar, Spark_Data_TypeDef userVarType, spark_variable_t* extra);
 
 /**
  * @param funcKey   The name of the function to register. When NULL, pFunc is taken to be a
@@ -134,18 +147,22 @@ void spark_process(void);
 void spark_connect(void);
 void spark_disconnect(void);    // should be set connected since it manages the connection state)
 bool spark_connected(void);
-SparkProtocol* system_cloud_protocol_instance(void);
+ProtocolFacade* system_cloud_protocol_instance(void);
 
 
 #define SPARK_BUF_LEN			        600
 
 //#define SPARK_SERVER_IP			        "54.235.79.249"
 #define SPARK_SERVER_PORT		        5683
-
+#define PORT_COAPS						(5684)
 #define SPARK_LOOP_DELAY_MILLIS		        1000    //1sec
 #define SPARK_RECEIVE_DELAY_MILLIS              10      //10ms
 
+#if PLATFORM_ID==10
+#define TIMING_FLASH_UPDATE_TIMEOUT             90000   //90sec
+#else
 #define TIMING_FLASH_UPDATE_TIMEOUT             30000   //30sec
+#endif
 
 #define USER_VAR_MAX_COUNT		        10
 #define USER_VAR_KEY_LENGTH		        12

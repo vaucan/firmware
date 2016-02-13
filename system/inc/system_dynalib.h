@@ -32,6 +32,7 @@
 #include "system_task.h"
 #include "system_update.h"
 #include "system_event.h"
+#include "system_version.h"
 #endif
 
 DYNALIB_BEGIN(system)
@@ -49,6 +50,14 @@ DYNALIB_FN(system, system_subscribe_event)
 DYNALIB_FN(system, system_unsubscribe_event)
 DYNALIB_FN(system, system_button_pushed_duration)
 DYNALIB_FN(system, system_thread_set_state)
+DYNALIB_FN(system, system_version_info)
+DYNALIB_FN(system, system_internal)
+DYNALIB_FN(system, system_set_flag)
+DYNALIB_FN(system, system_get_flag)
+DYNALIB_FN(system, Spark_Prepare_For_Firmware_Update)
+DYNALIB_FN(system, Spark_Save_Firmware_Chunk)
+DYNALIB_FN(system, Spark_Finish_Firmware_Update)
+
 DYNALIB_END(system)
 
 
